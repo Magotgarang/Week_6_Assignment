@@ -1,70 +1,92 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 
-// Define the structure for a product
-struct Product {
-    int id;
+#define MAX_USERS 100
+
+// Structure representing a User in the social network
+struct User {
     char name[50];
-    float price;
-    int quantity;
-    struct Product *left, *right;
+    int id;
 };
 
-// Function to create a new product node
-struct Product* createProduct(int id, char *name, float price, int quantity) {
-    struct Product *newProduct = (struct Product*)malloc(sizeof(struct Product));
-    newProduct->id = id;
-    strcpy(newProduct->name, name);
-    newProduct->price = price;
-    newProduct->quantity = quantity;
-    newProduct->left = newProduct->right = NULL;
-    return newProduct;
+// Structure representing the social network graph
+struct Graph {
+    int numUsers;
+    int adjMatrix[MAX_USERS][MAX_USERS]; // Adjacency matrix
+    struct User users[MAX_USERS]; // List of users (nodes)
+};
+
+// Function to create a new user in the network
+void addUser(struct Graph *graph, int id, char *name) {
+    struct User newUser;
+    newUser.id = id;
+    strcpy(newUser.name, name);
+    graph->users[graph->numUsers] = newUser;
+    graph->numUsers++;
 }
 
-// Insert product into the BST
-struct Product* insertProduct(struct Product* root, int id, char *name, float price, int quantity) {
-    if (root == NULL) return createProduct(id, name, price, quantity);
-    if (id < root->id) root->left = insertProduct(root->left, id, name, price, quantity);
-    else if (id > root->id) root->right = insertProduct(root->right, id, name, price, quantity);
-    return root;
+// Function to add a connection (edge) between two users
+void addConnection(struct Graph *graph, int user1, int user2) {
+    graph->adjMatrix[user1][user2] = 1;
+    graph->adjMatrix[user2][user1] = 1;
 }
 
-// In-order traversal to display products in ascending order
-void displayProducts(struct Product *root) {
-    if (root != NULL) {
-        displayProducts(root->left);
-        printf("ID: %d, Name: %s, Price: %.2f, Quantity: %d\n", root->id, root->name, root->price, root->quantity);
-        displayProducts(root->right);
+// Depth First Search function
+void DFS(struct Graph *graph, int user, bool visited[]) {
+    visited[user] = true;
+    printf("Visited %s\n", graph->users[user].name);
+    
+    for (int i = 0; i < graph->numUsers; i++) {
+        if (graph->adjMatrix[user][i] == 1 && !visited[i]) {
+            DFS(graph, i, visited);
+        }
     }
 }
 
-// Search product by name
-struct Product* searchProduct(struct Product* root, char *name) {
-    if (root == NULL || strcmp(root->name, name) == 0)
-        return root;
-    if (strcmp(name, root->name) < 0)
-        return searchProduct(root->left, name);
-    return searchProduct(root->right, name);
+// Function to recommend new connections for a user
+void recommendConnections(struct Graph *graph, int user) {
+    bool visited[MAX_USERS] = {false};
+    DFS(graph, user, visited);
+
+    printf("Recommendations for %s:\n", graph->users[user].name);
+    for (int i = 0; i < graph->numUsers; i++) {
+        if (!visited[i] && i != user) {
+            printf("Consider connecting with %s\n", graph->users[i].name);
+        }
+    }
 }
 
-// Main function
+// Function to initialize the graph
+void initializeGraph(struct Graph *graph) {
+    graph->numUsers = 0;
+    for (int i = 0; i < MAX_USERS; i++) {
+        for (int j = 0; j < MAX_USERS; j++) {
+            graph->adjMatrix[i][j] = 0;
+        }
+    }
+}
+
 int main() {
-    struct Product *root = NULL;
-    root = insertProduct(root, 101, "Laptop", 899.99, 10);
-    root = insertProduct(root, 102, "Mouse", 19.99, 50);
-    root = insertProduct(root, 103, "Keyboard", 49.99, 20);
+    struct Graph network;
+    initializeGraph(&network);
 
-    printf("Product List:\n");
-    displayProducts(root);
+    // Add users to the network
+    addUser(&network, 0, "Andrew");
+    addUser(&network, 1, "Samuel");
+    addUser(&network, 2, "Joshua");
+    addUser(&network, 3, "David");
+    addUser(&network, 4, "Peter");
 
-    char searchName[50] = "Mouse";
-    struct Product *foundProduct = searchProduct(root, searchName);
-    if (foundProduct != NULL)
-        printf("\nFound Product: %s, Price: %.2f\n", foundProduct->name, foundProduct->price);
-    else
-        printf("\nProduct not found.\n");
+    // Add connections (edges) between users
+    addConnection(&network, 0, 1); // Andrew <-> joshua
+    addConnection(&network, 0, 2); // Andrew <-> samuel
+    addConnection(&network, 1, 3); // Joshua <-> David
+    addConnection(&network, 2, 4); // peter <-> james
+
+    // Recommend connections for Andrew
+    recommendConnections(&network, 0);
 
     return 0;
 }
-
