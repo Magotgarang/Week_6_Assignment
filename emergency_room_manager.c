@@ -2,51 +2,45 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAX_PATIENT_COUNT 100  // Maximum number of patients that can be stored
+#define MAX_PATIENT_COUNT 100  // Maximum number of patients
 
 // Structure to represent a patient
 struct PatientRecord {
-    char patientName[50];  // Name of the patient
-    int conditionSeverity;  // Severity of the patient's condition
+    char patientName[50];
+    int conditionSeverity;
 };
 
 // Structure to represent a max heap
 struct PatientHeap {
-    int currentSize;                // Current number of patients in the heap
-    struct PatientRecord patients[MAX_PATIENT_COUNT];  // Array to store patients
+    int currentSize;
+    struct PatientRecord patients[MAX_PATIENT_COUNT];
 };
 
-// Function to swap two patients in the heap
+// Swap function
 void swapPatients(struct PatientRecord *a, struct PatientRecord *b) {
     struct PatientRecord temp = *a;
     *a = *b;
     *b = temp;
 }
 
-// Function to maintain the max heap property
+// Heapify function to maintain the max-heap property
 void adjustHeap(struct PatientHeap *heap, int index) {
-    int highest = index;
-    int leftChild = 2 * index + 1;  // Index of the left child
-    int rightChild = 2 * index + 2; // Index of the right child
+    int largest = index;
+    int leftChild = 2 * index + 1;
+    int rightChild = 2 * index + 2;
 
-    // Check if the left child is greater than the current highest
-    if (leftChild < heap->currentSize && heap->patients[leftChild].conditionSeverity > heap->patients[highest].conditionSeverity) {
-        highest = leftChild;
-    }
+    if (leftChild < heap->currentSize && heap->patients[leftChild].conditionSeverity > heap->patients[largest].conditionSeverity)
+        largest = leftChild;
+    if (rightChild < heap->currentSize && heap->patients[rightChild].conditionSeverity > heap->patients[largest].conditionSeverity)
+        largest = rightChild;
 
-    // Check if the right child is greater than the current highest
-    if (rightChild < heap->currentSize && heap->patients[rightChild].conditionSeverity > heap->patients[highest].conditionSeverity) {
-        highest = rightChild;
-    }
-
-    // If the highest is not the current index, swap and continue heapifying
-    if (highest != index) {
-        swapPatients(&heap->patients[index], &heap->patients[highest]);
-        adjustHeap(heap, highest); // Recursive call to heapify the affected subtree
+    if (largest != index) {
+        swapPatients(&heap->patients[index], &heap->patients[largest]);
+        adjustHeap(heap, largest);
     }
 }
 
-// Function to add a patient to the heap
+// Insert patient into heap
 void addPatient(struct PatientHeap *heap, const char *name, int severity) {
     if (heap->currentSize >= MAX_PATIENT_COUNT) {
         printf("Cannot add more patients. Maximum limit reached.\n");
@@ -57,38 +51,72 @@ void addPatient(struct PatientHeap *heap, const char *name, int severity) {
     strcpy(newPatient.patientName, name);
     newPatient.conditionSeverity = severity;
 
-    heap->patients[heap->currentSize] = newPatient; // Place new patient at the end
-    heap->currentSize++; // Increment the size of the heap
+    heap->patients[heap->currentSize] = newPatient;
+    heap->currentSize++;
 
-    int index = heap->currentSize - 1;
-
-    // Fix the max heap property if it is violated
-    while (index != 0 && heap->patients[(index - 1) / 2].conditionSeverity < heap->patients[index].conditionSeverity) {
-        swapPatients(&heap->patients[index], &heap->patients[(index - 1) / 2]);
-        index = (index - 1) / 2; // Move up to the parent
+    int i = heap->currentSize - 1;
+    while (i != 0 && heap->patients[(i - 1) / 2].conditionSeverity < heap->patients[i].conditionSeverity) {
+        swapPatients(&heap->patients[i], &heap->patients[(i - 1) / 2]);
+        i = (i - 1) / 2;
     }
 }
 
-// Function to display the heap contents
+// Extract the patient with the highest severity (root)
+struct PatientRecord extractMax(struct PatientHeap *heap) {
+    if (heap->currentSize <= 0) {
+        printf("No patients in the heap.\n");
+        struct PatientRecord empty = {"", -1};
+        return empty;
+    }
+
+    struct PatientRecord root = heap->patients[0];
+    heap->patients[0] = heap->patients[heap->currentSize - 1];
+    heap->currentSize--;
+    adjustHeap(heap, 0);
+
+    return root;
+}
+
+// Update a patient's severity
+void updateSeverity(struct PatientHeap *heap, int index, int newSeverity) {
+    int oldSeverity = heap->patients[index].conditionSeverity;
+    heap->patients[index].conditionSeverity = newSeverity;
+
+    if (newSeverity > oldSeverity) {
+        while (index != 0 && heap->patients[(index - 1) / 2].conditionSeverity < heap->patients[index].conditionSeverity) {
+            swapPatients(&heap->patients[index], &heap->patients[(index - 1) / 2]);
+            index = (index - 1) / 2;
+        }
+    } else {
+        adjustHeap(heap, index);
+    }
+}
+
+// Display the current queue of patients
 void displayHeap(const struct PatientHeap *heap) {
     for (int i = 0; i < heap->currentSize; i++) {
         printf("Patient Name: %s, Severity: %d\n", heap->patients[i].patientName, heap->patients[i].conditionSeverity);
     }
 }
 
-// Main function to demonstrate the heap functionality
+// Main function
 int main() {
-    struct PatientHeap heap; // Create a heap to manage patients
-    heap.currentSize = 0;    // Initialize the heap size to 0
+    struct PatientHeap heap;
+    heap.currentSize = 0;
 
-    // Adding patients to the heap
     addPatient(&heap, "Andrew", 5);
-    addPatient(&heap, "Samuel", 3);
-    addPatient(&heap, "Ezekiel", 7);
+    addPatient(&heap, "Ezekiel", 3);
+    addPatient(&heap, "Samuel", 7);
 
-    // Display the patients in the heap
-    printf("Current patient priority list:\n");
+    printf("Current patient queue:\n");
     displayHeap(&heap);
 
-    return 0; // Exit the program
+    printf("\nTreating highest severity patient:\n");
+    struct PatientRecord patientToTreat = extractMax(&heap);
+    printf("Treating patient: %s with severity %d\n", patientToTreat.patientName, patientToTreat.conditionSeverity);
+
+    printf("\nUpdated patient queue:\n");
+    displayHeap(&heap);
+
+    return 0;
 }
